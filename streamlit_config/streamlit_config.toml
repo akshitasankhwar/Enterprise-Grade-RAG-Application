@@ -1,0 +1,26 @@
+# Streamlit Configuration for Enterprise RAG
+# 
+# Place this file at: .streamlit/config.toml
+
+[theme]
+primaryColor = "#00D9FF"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[client]
+showErrorDetails = true
+toolbarMode = "viewer"
+
+[logger]
+level = "info"
+
+[server]
+port = 8501
+headless = true
+maxUploadSize = 50
+enableCORS = false
+
+[browser]
+gatherUsageStats = false

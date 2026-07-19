@@ -1,0 +1,10 @@
+
+============================================================
+Query: hello
+Response: Hello. It's nice to meet you. Is there something I can help you with or would you like to chat?...
+Time: 7.61s
+
+============================================================
+Query: tell me about machine learning
+Response: Machine learning is a subset of artificial intelligence (AI) that involves the use of algorithms and statistical models to enable machines to learn from data, make decisions, and improve their perform...
+Time: 13.67s

@@ -1,0 +1,28 @@
+# Create .gitignore file
+
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data
+/data/noisy_data/*
+/data/true_data/*
+!.gitkeep
+
+# Cache
+.streamlit/
+.qdrant/
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
