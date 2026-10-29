@@ -1,8 +1,8 @@
 """Tests - API endpoint tests using pytest"""
 
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.agents.nodes.responder import NOT_FOUND_RESPONSE
 
 # Create test client
 client = TestClient(app)
@@ -50,19 +50,26 @@ class TestQueryEndpoint:
         assert "sources" in data
     
     def test_query_empty(self):
-        """Test empty query rejection"""
+        """Test empty query rejection (schema validation)"""
         response = client.post("/query", json={
             "query": ""
         })
+        assert response.status_code == 422
+
+    def test_query_whitespace(self):
+        """Test whitespace-only query rejection"""
+        response = client.post("/query", json={
+            "query": "   "
+        })
         assert response.status_code == 400
-    
+
     def test_query_too_long(self):
-        """Test query length validation"""
+        """Test query length validation (schema validation)"""
         long_query = "a" * 2001
         response = client.post("/query", json={
             "query": long_query
         })
-        assert response.status_code == 400
+        assert response.status_code == 422
     
     def test_query_with_session_id(self):
         """Test query with session ID"""
@@ -86,6 +93,63 @@ class TestQueryEndpoint:
             assert field in data
 
 
+class TestDocumentEndpoints:
+    """Test upload → list → query → delete"""
+
+    FILENAME = "pytest_upload_sample.txt"
+    CONTENT = b"Project Heron kickoff is on 2 June 2027. The project lead is Dana Ortiz."
+
+    def upload(self):
+        return client.post("/upload", files=[("files", (self.FILENAME, self.CONTENT, "text/plain"))])
+
+    def test_document_lifecycle(self):
+        """Uploaded documents are listed, answer questions, re-upload replaces, delete removes"""
+        try:
+            response = self.upload()
+            assert response.status_code == 200
+            assert response.json()["files"] == [{"filename": self.FILENAME, "chunks": 1}]
+
+            # Re-uploading replaces instead of duplicating
+            assert self.upload().status_code == 200
+            documents = client.get("/documents").json()["documents"]
+            assert {"filename": self.FILENAME, "chunks": 1} in documents
+
+            # Answers come from the uploaded document and cite it as [1]
+            response = client.post("/query", json={"query": "When is the Project Heron kickoff?"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["sources"][0]["source"] == self.FILENAME
+            assert "2027" in data["response"]
+            assert "[1]" in data["response"]
+
+            # Questions the library can't answer get a not-found reply, not general knowledge
+            response = client.post("/query", json={
+                "query": "What does the uploaded document say about submarine engine warranties?"
+            })
+            assert response.status_code == 200
+            data = response.json()
+            assert data["classification"] == "TECHNICAL"
+            assert data["sources"] == []
+            assert data["response"] == NOT_FOUND_RESPONSE
+        finally:
+            response = client.delete(f"/documents/{self.FILENAME}")
+
+        assert response.status_code == 200
+        assert response.json()["deleted_chunks"] == 1
+        names = [d["filename"] for d in client.get("/documents").json()["documents"]]
+        assert self.FILENAME not in names
+
+    def test_upload_unsupported_type(self):
+        """Test unsupported files are rejected"""
+        response = client.post("/upload", files=[("files", ("image.png", b"\x89PNG", "image/png"))])
+        assert response.status_code == 400
+
+    def test_delete_missing_document(self):
+        """Test deleting an unknown document returns 404"""
+        response = client.delete("/documents/does_not_exist.pdf")
+        assert response.status_code == 404
+
+
 class TestInfoEndpoint:
     """Test info endpoint"""
     
@@ -101,8 +165,8 @@ class TestInfoEndpoint:
         
         assert "api_name" in data
         assert "version" in data
-        assert "project" in data
         assert "qdrant" in data
+        assert "point_count" in data["qdrant"]
 
 
 class TestRootEndpoint:
@@ -119,38 +183,3 @@ class TestRootEndpoint:
         data = response.json()
         
         assert "endpoints" in data or "message" in data
-
-
-# Manual test runner
-if __name__ == "__main__":
-    print("Running API tests...\n")
-    
-    # Test health
-    print("Testing /health...")
-    response = client.get("/health")
-    print(f"  Status: {response.status_code}")
-    print(f"  Data: {response.json()}\n")
-    
-    # Test root
-    print("Testing /...")
-    response = client.get("/")
-    print(f"  Status: {response.status_code}\n")
-    
-    # Test info
-    print("Testing /info...")
-    response = client.get("/info")
-    print(f"  Status: {response.status_code}\n")
-    
-    # Test query
-    print("Testing /query...")
-    response = client.post("/query", json={
-        "query": "Hello, how are you?"
-    })
-    print(f"  Status: {response.status_code}")
-    if response.status_code == 200:
-        data = response.json()
-        print(f"  Query: {data['query']}")
-        print(f"  Classification: {data['classification']}")
-        print(f"  Response: {data['response'][:100]}...")
-    else:
-        print(f"  Error: {response.json()}")

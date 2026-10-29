@@ -47,20 +47,17 @@ def create_graph():
     return compiled_graph
 
 
-def run_agent(query: str, graph=None) -> AgentState:
+def run_agent(query: str, graph) -> dict:
     """
     Run the agent on a query.
-    
+
     Args:
         query: User's question
-        graph: Compiled LangGraph (creates if None)
-        
+        graph: Compiled LangGraph from create_graph()
+
     Returns:
-        Final agent state with response
+        Final agent state as a dict (LangGraph returns state fields as a dict)
     """
-    if graph is None:
-        graph = create_graph()
-    
     # Create initial state
     initial_state = AgentState(query=query)
     
@@ -69,34 +66,4 @@ def run_agent(query: str, graph=None) -> AgentState:
     print(f"Query: {query}")
     print(f"{'='*60}")
     
-    final_state = graph.invoke(initial_state)
-    print(type(final_state))
-    print(final_state)
-    
-    return final_state
-
-
-if __name__ == "__main__":
-    # Test the graph
-    from app.config import settings
-    
-    # Create graph
-    print("Creating agent graph...")
-    graph = create_graph()
-    
-    # Test 1: Conversational
-    print("\n" + "="*60)
-    print("TEST 1: Conversational Query")
-    print("="*60)
-    result1 = run_agent("Hello! How are you today?", graph)
-    print(f"\nResponse: {result1.response}")
-    print(f"Reasoning: {result1.reasoning}")
-    
-    # Test 2: Technical (if documents exist)
-    print("\n" + "="*60)
-    print("TEST 2: Technical Query")
-    print("="*60)
-    result2 = run_agent("What is machine learning?", graph)
-    print(f"\nResponse: {result2.response}")
-    print(f"Reasoning: {result2.reasoning}")
-    print(f"Documents used: {len(result2.reranked_docs)}")
+    return graph.invoke(initial_state)

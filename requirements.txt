@@ -1,22 +1,29 @@
+# Runtime dependencies. Dev tools (pytest) are in requirements-dev.txt
+
+# API
 fastapi
 uvicorn[standard]
-python-dotenv
+python-multipart  # file uploads
 pydantic
 pydantic-settings
-streamlit
-langchain
+python-dotenv  # lets pydantic-settings read .env
+
+# Agent + LLM
 langgraph
+langchain-core
 langchain-groq
-sentence-transformers
-torch
-transformers
-qdrant-client
+langchain-text-splitters
+
+# Retrieval
+sentence-transformers  # brings in torch
 flashrank
+qdrant-client>=1.20,<1.21  # keep within one minor version of the Qdrant server
+
+# Document loaders
 pypdf
 python-docx
 beautifulsoup4
+
+# UI
+streamlit
 requests
-loguru
-numpy
-langchain-community
-langchain-core

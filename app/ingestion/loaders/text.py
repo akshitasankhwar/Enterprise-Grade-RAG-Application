@@ -28,10 +28,3 @@ def load_txt(file_path: str) -> List[str]:
     except Exception as e:
         print(f"❌ Error loading TXT {file_path}: {e}")
         return []
-
-
-if __name__ == "__main__":
-    # Test the loader
-    test_txt = "data/true_data/sample.txt"
-    result = load_txt(test_txt)
-    print(f"Loaded {len(result)} file(s)")

@@ -1,7 +1,6 @@
 """Planner Node - Classify the query and decide routing"""
-from app.config import settings
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
+from app.agents.llm import make_llm
 from app.agents.state import AgentState
 
 
@@ -23,19 +22,18 @@ def planner_node(state: AgentState) -> AgentState:
     print(f"Query: {state.query}")
     
     try:
-        # Initialize LLM
-        llm = ChatGroq(
-            model_name=state.model_name,
-            temperature=0,  # Deterministic for classification
-            groq_api_key=settings.GROQ_API_KEY  # Uses GROQ_API_KEY from environment
-        )
-        
+        # Deterministic for classification
+        llm = make_llm(state.model_name, temperature=0)
+
         # Create classification prompt
         prompt = ChatPromptTemplate.from_template("""
+You route messages for an assistant that answers questions from the user's uploaded documents.
 Classify this user query as either CONVERSATIONAL or TECHNICAL.
 
-CONVERSATIONAL = Greetings, chitchat, general questions (Hi, How are you?, What's the weather?)
-TECHNICAL = Asking about specific documents, data, or technical information
+CONVERSATIONAL = Greetings, thanks, small talk, or questions about the assistant itself (Hi, How are you?, Thanks!, What can you do?)
+TECHNICAL = Any request for information, facts, numbers, rules, people, dates or summaries, even if it doesn't mention documents (What is the meal allowance?, Who leads the project?, Summarize the report)
+
+When unsure, answer TECHNICAL.
 
 Query: {query}
 
@@ -68,18 +66,3 @@ Respond with ONLY the classification word: CONVERSATIONAL or TECHNICAL
         state.reasoning = f"Error during classification: {str(e)}"
     
     return state
-
-
-if __name__ == "__main__":
-    # Test the planner
-    from app.config import settings
-    
-    # Test conversational
-    state1 = AgentState(query="Hello! How are you?")
-    result1 = planner_node(state1)
-    print(f"Result: {result1.classification}\n")
-    
-    # Test technical
-    state2 = AgentState(query="What does the document say about machine learning?")
-    result2 = planner_node(state2)
-    print(f"Result: {result2.classification}")

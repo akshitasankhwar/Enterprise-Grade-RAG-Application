@@ -1,0 +1,21 @@
+# Secrets and personal data never go into the image
+.env
+data/uploads/*
+!data/uploads/.gitkeep
+logs/
+
+# Not needed at runtime
+tests/
+docs/
+requirements-dev.txt
+.pytest_cache/
+
+# Local tooling
+.git
+.vscode/
+.idea/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo

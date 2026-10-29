@@ -1,0 +1,5 @@
+# Tool configuration. The app runs from source (uvicorn / streamlit), it isn't installed as a package.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

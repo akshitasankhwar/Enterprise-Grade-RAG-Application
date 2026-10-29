@@ -29,10 +29,3 @@ def load_docx(file_path: str) -> List[str]:
     except Exception as e:
         print(f"❌ Error loading DOCX {file_path}: {e}")
         return []
-
-
-if __name__ == "__main__":
-    # Test the loader
-    test_docx = "data/true_data/sample.docx"
-    result = load_docx(test_docx)
-    print(f"Loaded {len(result)} paragraphs")

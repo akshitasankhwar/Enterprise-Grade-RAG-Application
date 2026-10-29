@@ -1,0 +1,37 @@
+# Streamlit Configuration for Enterprise RAG
+
+[theme]
+base = "light"
+primaryColor = "#2B4C9B"            # ink blue - primary actions
+backgroundColor = "#F2F4F7"         # paper
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#172033"               # ink
+linkColor = "#2B4C9B"
+borderColor = "#DCE1E8"
+showWidgetBorder = true
+baseRadius = "0.5rem"
+baseFontSize = 15
+font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
+headingFont = "Literata:https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap"
+headingFontWeights = [500, 600, 600, 600, 600, 600]
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F7"
+borderColor = "#DCE1E8"
+
+[client]
+showErrorDetails = true
+toolbarMode = "viewer"
+
+[logger]
+level = "info"
+
+[server]
+port = 8501
+headless = true
+maxUploadSize = 50
+enableCORS = false
+
+[browser]
+gatherUsageStats = false

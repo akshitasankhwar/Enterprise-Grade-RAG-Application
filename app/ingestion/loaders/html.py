@@ -37,10 +37,3 @@ def load_html(file_path: str) -> List[str]:
     except Exception as e:
         print(f"❌ Error loading HTML {file_path}: {e}")
         return []
-
-
-if __name__ == "__main__":
-    # Test the loader
-    test_html = "data/true_data/sample.html"
-    result = load_html(test_html)
-    print(f"Loaded {len(result)} chunk(s)")

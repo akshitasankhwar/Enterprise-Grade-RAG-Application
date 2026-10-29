@@ -1,11 +1,11 @@
-# Create .gitignore file
-
 # Environment
 .env
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
 # IDE
 .vscode/
@@ -13,15 +13,15 @@ __pycache__/
 *.swp
 *.swo
 
-# Data
-/data/noisy_data/*
-/data/true_data/*
-!.gitkeep
+# Uploaded documents (stored at runtime)
+/data/uploads/*
+!/data/uploads/.gitkeep
 
-# Cache
-.streamlit/
-.qdrant/
-*.db
+# Logs
+logs/
+
+# Streamlit secrets (config.toml is tracked)
+.streamlit/secrets.toml
 
 # OS
 .DS_Store

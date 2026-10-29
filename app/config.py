@@ -6,30 +6,29 @@ from typing import Optional
 
 class Settings(BaseSettings):
     """Application settings from .env file"""
-    
-    # Project
-    PROJECT_ID: str = "local-rag"
-    LOCATION: str = "local"
-    
+
     # LLM (Groq)
     GROQ_API_KEY: str  # Required!
-    
+    GROQ_MODEL: str = "openai/gpt-oss-120b"  # See https://console.groq.com/docs/models
+
     # Embeddings
     EMBEDDINGS_MODEL: str = "all-MiniLM-L6-v2"
-    
+
     # Qdrant (Vector DB)
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "documents"
+    QDRANT_URL: Optional[str] = None  # Qdrant Cloud cluster URL - overrides host/port when set
+    QDRANT_API_KEY: Optional[str] = None  # Qdrant Cloud API key
+
+    # Retrieval - passages less similar than this (cosine, 0-1) are never shown to the LLM
+    MIN_RELEVANCE: float = 0.15
 
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,
         extra="ignore"
-        )
-
-
-    
+    )
 
 
 # Create global settings instance
@@ -40,10 +39,3 @@ except Exception as e:
     print(f"❌ Error loading settings: {e}")
     print("Make sure .env file exists with GROQ_API_KEY")
     raise
-
-
-if __name__ == "__main__":
-    print(f"Project: {settings.PROJECT_ID}")
-    print(f"Qdrant: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
-    print(f"Collection: {settings.QDRANT_COLLECTION}")
-    print(f"Embeddings model: {settings.EMBEDDINGS_MODEL}")

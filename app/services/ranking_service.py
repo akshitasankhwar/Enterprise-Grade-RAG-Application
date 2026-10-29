@@ -1,6 +1,6 @@
 """Ranking Service - Rerank documents using FlashRank"""
 
-from flashrank import Ranker
+from flashrank import Ranker, RerankRequest
 from typing import List, Dict
 
 
@@ -38,20 +38,18 @@ class RankingService:
             # Format for flashrank
             passages = [{"id": i, "text": doc} for i, doc in enumerate(documents)]
             
-            # Rerank
-            results = self.ranker.rank(
-                query=query,
-                passages=passages,
-                batch_size=min(len(passages), 128)  # Batch size for efficiency
+            # Rerank (results come back sorted by score, highest first)
+            results = self.ranker.rerank(
+                RerankRequest(query=query, passages=passages)
             )
-            
+
             # Return top-k
             top_results = results[:top_k] if len(results) >= top_k else results
-            
+
             return [
                 {
                     "text": result["text"],
-                    "score": result["score"],
+                    "score": float(result["score"]),  # numpy float32 → JSON-safe float
                     "index": result["id"]
                 }
                 for result in top_results
@@ -62,19 +60,13 @@ class RankingService:
             return []
 
 
-if __name__ == "__main__":
-    # Test the service
-    service = RankingService()
-    
-    query = "What is machine learning?"
-    documents = [
-        "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience.",
-        "The capital of France is Paris.",
-        "Deep learning uses neural networks with multiple layers.",
-        "Python is a programming language."
-    ]
-    
-    results = service.rerank(query, documents, top_k=2)
-    print(f"Top {len(results)} results:")
-    for i, result in enumerate(results, 1):
-        print(f"{i}. Score: {result['score']:.4f} - {result['text'][:80]}...")
+# Shared instance (lazy load) - avoids reloading the reranker model on every query
+_ranking_service = None
+
+
+def get_ranking_service() -> RankingService:
+    """Get the process-wide ranking service."""
+    global _ranking_service
+    if _ranking_service is None:
+        _ranking_service = RankingService()
+    return _ranking_service

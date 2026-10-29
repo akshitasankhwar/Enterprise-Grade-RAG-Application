@@ -30,10 +30,3 @@ def load_pdf(file_path: str) -> List[str]:
     except Exception as e:
         print(f"❌ Error loading PDF {file_path}: {e}")
         return []
-
-
-if __name__ == "__main__":
-    # Test the loader
-    test_pdf = "data/true_data/sample.pdf"
-    result = load_pdf(test_pdf)
-    print(f"Loaded {len(result)} pages")

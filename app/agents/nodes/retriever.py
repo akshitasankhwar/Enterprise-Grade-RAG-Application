@@ -1,8 +1,9 @@
 """Retriever Node - Fetch relevant documents from Qdrant"""
 
+from app.config import settings
 from app.agents.state import AgentState
-from app.services.retrieval.embedding import EmbeddingService
-from app.services.retrieval.qdrant_service import QdrantService
+from app.services.embedding_service import get_embedding_service
+from app.services.qdrant_service import QdrantService
 
 
 def retriever_node(state: AgentState) -> AgentState:
@@ -25,31 +26,31 @@ def retriever_node(state: AgentState) -> AgentState:
     
     try:
         # Initialize services
-        embedding_service = EmbeddingService()
+        embedding_service = get_embedding_service()
         qdrant_service = QdrantService()
         
         # Embed the query
         print("Creating embedding for query...")
         query_vector = embedding_service.embed_text(state.query)
         
-        # Search Qdrant
+        # Search Qdrant, skipping passages below the relevance floor
         print("Searching Qdrant...")
-        results = qdrant_service.search(query_vector, limit=10)
-        
+        results = qdrant_service.search(query_vector, limit=10, score_threshold=settings.MIN_RELEVANCE)
+
         if results:
             state.retrieved_docs = results
             print(f"✅ Found {len(results)} documents")
-            
+
             # Show top result
             top_result = results[0]
             print(f"   Top match score: {top_result['score']:.4f}")
             print(f"   Source: {top_result['source']}")
             print(f"   Text: {top_result['text'][:100]}...")
         else:
-            print("⚠️ No documents found in database")
+            print(f"⚠️ No passages with similarity ≥ {settings.MIN_RELEVANCE}")
             state.retrieved_docs = []
-        
-        state.reasoning += f" → Retrieved {len(results)} documents"
+
+        state.reasoning += f" → Retrieved {len(results)} passages (similarity ≥ {settings.MIN_RELEVANCE})"
         
     except Exception as e:
         print(f"❌ Error in retriever: {e}")
@@ -57,22 +58,3 @@ def retriever_node(state: AgentState) -> AgentState:
         state.reasoning += f" → Retrieval error: {str(e)}"
     
     return state
-
-
-if __name__ == "__main__":
-    # Test the retriever
-    from app.config import settings
-    
-    state = AgentState(
-        query="What is machine learning?",
-        classification="TECHNICAL"
-    )
-    
-    result = retriever_node(state)
-    print(f"\nRetrieved {len(result.retrieved_docs)} documents")
-    
-    if result.retrieved_docs:
-        for i, doc in enumerate(result.retrieved_docs[:3], 1):
-            print(f"\n{i}. Score: {doc['score']:.4f}")
-            print(f"   Source: {doc['source']}")
-            print(f"   Text: {doc['text'][:100]}...")
