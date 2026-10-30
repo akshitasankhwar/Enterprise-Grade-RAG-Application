@@ -22,7 +22,7 @@ def retriever_node(state: AgentState) -> AgentState:
         Updated state with retrieved documents
     """
     print("\n🔍 RETRIEVER NODE")
-    print(f"Query: {state.query}")
+    print(f"Query: {state.search_query}")
     
     try:
         # Initialize services
@@ -31,7 +31,7 @@ def retriever_node(state: AgentState) -> AgentState:
         
         # Embed the query
         print("Creating embedding for query...")
-        query_vector = embedding_service.embed_text(state.query)
+        query_vector = embedding_service.embed_text(state.search_query)
         
         # Search Qdrant, skipping passages below the relevance floor
         print("Searching Qdrant...")

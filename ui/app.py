@@ -9,6 +9,7 @@ import html
 import json
 import os
 import re
+import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -342,8 +343,9 @@ require_password()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# The API remembers each chat's recent turns under this ID
 if "session_id" not in st.session_state:
-    st.session_state.session_id = f"session_{datetime.now().timestamp()}"
+    st.session_state.session_id = f"session_{uuid.uuid4().hex}"
 
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
@@ -449,6 +451,8 @@ with st.sidebar:
         with col_new:
             if st.button("New chat", icon=":material/add_comment:", width="stretch"):
                 st.session_state.messages = []
+                # A new ID starts the API's memory fresh too
+                st.session_state.session_id = f"session_{uuid.uuid4().hex}"
                 st.rerun()
 
         with col_export:

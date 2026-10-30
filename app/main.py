@@ -175,7 +175,7 @@ async def query(
         
         # Run agent
         logger.info("Running agent pipeline...")
-        result_state = run_agent(request.query, graph)
+        result_state = run_agent(request.query, graph, request.session_id)
         
         # Convert reranked documents to response format
         sources = [

@@ -1,5 +1,7 @@
 """Tests - API endpoint tests using pytest"""
 
+import uuid
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.agents.nodes.responder import NOT_FOUND_RESPONSE
@@ -80,7 +82,23 @@ class TestQueryEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["session_id"] == "test_session_123"
-    
+
+    def test_query_remembers_session(self):
+        """Queries with the same session ID remember earlier turns; other sessions don't"""
+        session_id = f"pytest_{uuid.uuid4().hex}"
+        client.post("/query", json={"query": "Hi! My name is Priya.", "session_id": session_id})
+
+        response = client.post("/query", json={"query": "What did I say my name was?", "session_id": session_id})
+        assert response.status_code == 200
+        assert "Priya" in response.json()["response"]
+
+        response = client.post("/query", json={
+            "query": "What did I say my name was?",
+            "session_id": f"pytest_{uuid.uuid4().hex}"
+        })
+        assert response.status_code == 200
+        assert "Priya" not in response.json()["response"]
+
     def test_query_response_structure(self):
         """Test query response structure"""
         response = client.post("/query", json={
@@ -115,12 +133,24 @@ class TestDocumentEndpoints:
             assert {"filename": self.FILENAME, "chunks": 1} in documents
 
             # Answers come from the uploaded document and cite it as [1]
-            response = client.post("/query", json={"query": "When is the Project Heron kickoff?"})
+            session_id = f"pytest_{uuid.uuid4().hex}"
+            response = client.post("/query", json={
+                "query": "When is the Project Heron kickoff?",
+                "session_id": session_id
+            })
             assert response.status_code == 200
             data = response.json()
             assert data["sources"][0]["source"] == self.FILENAME
             assert "2027" in data["response"]
             assert "[1]" in data["response"]
+
+            # A follow-up in the same session is rewritten to stand alone, then answered from the document
+            response = client.post("/query", json={"query": "Who leads that project?", "session_id": session_id})
+            assert response.status_code == 200
+            data = response.json()
+            assert "Read follow-up as" in data["reasoning"]
+            assert data["sources"][0]["source"] == self.FILENAME
+            assert "Dana Ortiz" in data["response"]
 
             # Questions the library can't answer get a not-found reply, not general knowledge
             response = client.post("/query", json={

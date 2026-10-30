@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Retrieval - passages less similar than this (cosine, 0-1) are never shown to the LLM
     MIN_RELEVANCE: float = 0.15
 
+    # Memory - how many recent question/answer pairs each chat remembers (0 = no memory)
+    MEMORY_TURNS: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

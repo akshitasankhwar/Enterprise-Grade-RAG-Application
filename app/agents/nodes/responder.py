@@ -2,7 +2,10 @@
 import re
 from typing import Dict, List
 
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
+from app.config import settings
 from app.agents.llm import make_llm
 from app.agents.state import AgentState
 from app.services.ranking_service import get_ranking_service
@@ -34,13 +37,12 @@ Rules:
 ANSWER:
 """)
 
-CONVERSATIONAL_PROMPT = ChatPromptTemplate.from_template("""
-You are a friendly and helpful AI assistant.
-
-Question: {query}
-
-Answer:
-""")
+# Small talk sees the earlier turns, so "What did I ask you earlier?" works
+CONVERSATIONAL_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", "You are a friendly and helpful AI assistant."),
+    MessagesPlaceholder("history"),
+    ("human", "{query}")
+])
 
 
 def format_passages(docs: List[Dict]) -> str:
@@ -78,6 +80,7 @@ def responder_node(state: AgentState) -> AgentState:
     1. Rerank retrieved documents (if any)
     2. Number the top passages as context
     3. Generate a cited answer from those passages only (or say it wasn't found)
+    4. Add the question and answer to the chat's memory
 
     Args:
         state: Current agent state
@@ -92,7 +95,7 @@ def responder_node(state: AgentState) -> AgentState:
         if state.classification == "CONVERSATIONAL":
             # Conversational - no documents needed
             chain = CONVERSATIONAL_PROMPT | make_llm(state.model_name, temperature=0.7)
-            state.response = chain.invoke({"query": state.query}).content
+            state.response = chain.invoke({"history": state.messages, "query": state.query}).content
             state.reasoning += " → Generated response"
 
         elif not state.retrieved_docs:
@@ -104,7 +107,7 @@ def responder_node(state: AgentState) -> AgentState:
             # Document question - rerank, then answer only from the top passages
             print("Reranking documents...")
             doc_texts = [doc["text"] for doc in state.retrieved_docs]
-            reranked = get_ranking_service().rerank(state.query, doc_texts, top_k=3)
+            reranked = get_ranking_service().rerank(state.search_query, doc_texts, top_k=3)
 
             # If reranking fails, fall back to the closest passages by similarity
             if not reranked:
@@ -124,10 +127,12 @@ def responder_node(state: AgentState) -> AgentState:
             ]
             print(f"✅ Reranked to {len(state.reranked_docs)} documents")
 
-            # Temperature 0: stick to the passages rather than paraphrase creatively
+            # Temperature 0: stick to the passages rather than paraphrase creatively.
+            # The standalone query carries what a follow-up refers to; earlier answers
+            # stay out of this prompt so their [n] citations can't mix with these passages.
             chain = GROUNDED_PROMPT | make_llm(state.model_name, temperature=0)
             answer = chain.invoke({
-                "query": state.query,
+                "query": state.search_query,
                 "context": format_passages(state.reranked_docs)
             }).content
 
@@ -146,5 +151,12 @@ def responder_node(state: AgentState) -> AgentState:
         print(f"❌ Error in responder: {e}")
         state.response = f"I encountered an error: {str(e)}"
         state.reasoning += f" → Error: {str(e)}"
+
+    # Remember this turn; turns older than the last MEMORY_TURNS are forgotten
+    turns = state.messages + [HumanMessage(state.query), AIMessage(state.response)]
+    state.messages = [
+        RemoveMessage(id=REMOVE_ALL_MESSAGES),
+        *turns[max(0, len(turns) - 2 * settings.MEMORY_TURNS):]
+    ]
 
     return state

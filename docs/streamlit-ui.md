@@ -19,11 +19,12 @@ Open http://localhost:8501. If the API runs on a port other than 8000, set `API_
 - **Add documents**: drop PDF, DOCX, TXT, MD, CSV or HTML files (up to 50 MB each), then click **Add to library**. A toast confirms each file and how many passages it produced.
 - **Library**: every document in the knowledge base with its passage count. The trash icon removes a document after you confirm.
 - **Display**: toggle **Show sources** and **Show how answers were found**.
-- **Conversation**: **New chat** clears the chat; **Export** downloads it as JSON or Markdown.
+- **Conversation**: **New chat** clears the chat and the assistant's memory of it; **Export** downloads it as JSON or Markdown.
 - A status line at the bottom shows whether the UI can reach the API.
 
 **Main area**
 - Before the first question: a short introduction, plus suggested questions once the library has documents.
+- The assistant remembers the last few turns of the chat, so follow-ups like "who wrote it?" or "explain the second point" work.
 - Answers cite their passages as `[1]`, `[2]`, … Expandable **Sources** shows the passages with the same numbers, plus their file and page (PDFs). Cited passages are highlighted; passages the answer didn't use are greyed out and marked "not cited".
 - A note under each answer says where it came from: "Answered from 2 passages in your library", "Nothing relevant found in your library" (the documents don't cover the question), or "General reply. No documents searched." (small talk).
 

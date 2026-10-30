@@ -19,7 +19,8 @@ A production-grade Retrieval Augmented Generation (RAG) system built with **Lang
 
 ### Core System
 - 📤 **Upload-driven knowledge base**: Users add PDF, DOCX, TXT, MD, CSV and HTML files themselves, from the UI or the API
-- 🧠 **LangGraph Agent**: Planner → Retriever → Responder nodes
+- 🧠 **LangGraph Agent**: Rewriter → Planner → Retriever → Responder nodes
+- 💭 **Conversation memory**: each chat remembers its last few turns (LangGraph checkpointer), so follow-ups like "who wrote it?" work
 - 🔍 **Semantic Search**: Local embeddings (sentence-transformers) + Qdrant vector DB
 - 🎯 **Smart Reranking**: FlashRank reranking picks the best passages for each answer
 - 💬 **Fast LLM**: Groq inference (model configurable via `GROQ_MODEL`)
@@ -54,8 +55,9 @@ A production-grade Retrieval Augmented Generation (RAG) system built with **Lang
             ▼                                 ▼
 ┌──────────────────────┐         ┌──────────────────────────┐
 │  Document Processing │         │     LangGraph Agent      │
-│  Load → Chunk →      │         │  Planner → Retriever →   │
-│  Embed → Store       │         │  Responder (Groq LLM)    │
+│  Load → Chunk →      │         │  Rewriter → Planner →    │
+│  Embed → Store       │         │  Retriever → Responder   │
+│                      │         │  (Groq LLM + memory)     │
 └──────────┬───────────┘         └────────────┬─────────────┘
            │                                  │
            └──────────────┬───────────────────┘
@@ -140,10 +142,11 @@ Enterprise-Grade-RAG-Application-main/
 │   ├── config.py               # Settings from .env
 │   ├── models.py               # Request/Response schemas
 │   ├── agents/                 # LangGraph agent
-│   │   ├── graph.py            # Planner → Retriever → Responder
+│   │   ├── graph.py            # Rewriter → Planner → Retriever → Responder
 │   │   ├── state.py            # State passed between nodes
 │   │   ├── llm.py              # Groq chat model
 │   │   └── nodes/
+│   │       ├── rewriter.py     # Resolve follow-ups using chat memory
 │   │       ├── planner.py      # Document question or chat?
 │   │       ├── retriever.py    # Search Qdrant
 │   │       └── responder.py    # Rerank + cited answer
@@ -264,6 +267,8 @@ curl -X POST http://localhost:8000/query \
 
 `[1]` in the response refers to `sources[0]`, `[2]` to `sources[1]`, and so on. `page` is the zero-based page number for PDFs; for other formats it is the section index within the file.
 
+Queries that share a `session_id` share memory: a follow-up such as `{"query": "Which of those apply to contractors?", "session_id": "user_123"}` is read in the context of the earlier questions. Leave `session_id` out to ask a one-off question.
+
 If nothing in the library answers the question, the response is a fixed "I couldn't find that in your documents..." message with an empty `sources` list.
 
 ---
@@ -274,6 +279,10 @@ If nothing in the library answers the question, the response is a fixed "I could
 
 ```
 User Query
+    ↓
+Rewriter Node
+├─ Load this session's recent turns (LangGraph checkpointer)
+├─ Follow-up? Rewrite it to stand alone ("its authors" → "the authors of <paper>")
     ↓
 Planner Node
 ├─ Classify: CONVERSATIONAL or TECHNICAL?
@@ -290,6 +299,7 @@ Responder Node
 ├─ Call Groq LLM (temperature 0): answer only from the passages,
 │  cite every claim, or reply NOT_FOUND
 ├─ NOT_FOUND → reply "couldn't find that in your documents"
+├─ Remember the question and answer (last MEMORY_TURNS turns)
     ↓
 Return to User
 ├─ Response text with [n] citations
@@ -337,6 +347,7 @@ See [.env.example](./.env.example) for the full template.
 | `QDRANT_URL` / `QDRANT_API_KEY` | unset | Qdrant Cloud cluster URL and key; overrides host/port when set |
 | `EMBEDDINGS_MODEL` | `all-MiniLM-L6-v2` | sentence-transformers model (384-dim) |
 | `MIN_RELEVANCE` | `0.15` | Minimum cosine similarity for a passage to reach the LLM (raise it to be stricter) |
+| `MEMORY_TURNS` | `5` | Question/answer pairs each chat remembers (0 = no memory). Memory lives in the API process and resets when it restarts |
 
 The UI reads `API_BASE_URL` (default `http://localhost:8000`) to find the API, and `APP_PASSWORD` (unset = no sign-in) to require a password before the app opens.
 
@@ -460,7 +471,7 @@ streamlit run ui/app.py --server.address 0.0.0.0
 Feel free to fork, modify, and improve! Some ideas:
 
 - Add more document loaders (Excel, PowerPoint, etc.)
-- Implement multi-turn conversation memory
+- Keep chat memory across API restarts (swap `InMemorySaver` for a SQLite or Postgres checkpointer)
 - Add authentication and per-user libraries
 - Add OCR for scanned PDFs
 

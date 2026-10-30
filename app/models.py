@@ -16,7 +16,8 @@ class QueryRequest(BaseModel):
     
     session_id: Optional[str] = Field(
         None,
-        description="Optional session ID, echoed back in the response"
+        description="Chat session ID. Queries with the same ID share memory, so follow-ups work; "
+                    "omit it to ask a one-off question. Echoed back in the response"
     )
 
     model_config = ConfigDict(json_schema_extra={
